@@ -5,7 +5,7 @@ on:
     inputs:
       image_tag:
         description: "Docker Image Tag"
-        default: "latest"
+        default: "latest"  
         required: true
 
 jobs:
