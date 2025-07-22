@@ -23,10 +23,3 @@ jobs:
         IMAGE=lithu213/strapi-app:latest
         docker build -t $IMAGE .
         docker push $IMAGE
-
-    - name: Export image tag
-      id: image
-      run: echo "tag=latest" >> "$GITHUB_OUTPUT"
-
-  outputs:
-    image_tag: ${{ steps.image.outputs.tag }}
