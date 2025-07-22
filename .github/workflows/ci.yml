@@ -12,19 +12,21 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
 
-    - name: Set up Docker
+    - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
 
-    - name: Build and push
+    - name: Log in to Docker Hub
+      run: echo "${{ secrets.DOCKERHUB_PASSWORD }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+
+    - name: Build and push Docker image
       run: |
         IMAGE=lithu213/strapi-app:latest
         docker build -t $IMAGE .
-        echo ${{ secrets.DOCKERHUB_PASSWORD }} | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
         docker push $IMAGE
 
     - name: Export image tag
       id: image
-      run: echo "::set-output name=tag::latest"
+      run: echo "tag=latest" >> "$GITHUB_OUTPUT"
 
-    outputs:
-      image_tag: ${{ steps.image.outputs.tag }}
+  outputs:
+    image_tag: ${{ steps.image.outputs.tag }}
