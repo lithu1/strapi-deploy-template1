@@ -4,7 +4,7 @@ provider "aws" {
   secret_key = var.aws_secret_key
 }
 
-# ✅ Dynamically get the latest Amazon Linux 2 AMI
+# ✅ Dynamic Amazon Linux 2 AMI
 data "aws_ami" "amazon_linux" {
   most_recent = true
   owners      = ["amazon"]
@@ -20,32 +20,20 @@ data "aws_ami" "amazon_linux" {
   }
 }
 
-# ✅ EC2 Key Pair
-resource "aws_key_pair" "deployer" {
-  key_name   = "strapi-key"
-  public_key = file(var.public_key_path)
-}
-
-# ✅ Security Group (SSH + HTTP for Strapi)
+# ✅ Security Group (allow SSH-free Strapi access on port 1337)
 resource "aws_security_group" "strapi_sg" {
   name        = "strapi-sg"
-  description = "Allow SSH and Strapi port"
+  description = "Allow Strapi HTTP access"
 
   ingress {
-    description = "SSH"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    description = "Strapi port"
+    description = "Allow Strapi (port 1337)"
     from_port   = 1337
     to_port     = 1337
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  # No SSH ingress rule needed
 
   egress {
     from_port   = 0
@@ -55,12 +43,12 @@ resource "aws_security_group" "strapi_sg" {
   }
 }
 
-# ✅ EC2 Instance with Docker + Strapi container
+# ✅ EC2 Instance running Strapi Docker container
 resource "aws_instance" "strapi" {
-  ami                    = data.aws_ami.amazon_linux.id
-  instance_type          = "t2.micro"
-  key_name               = aws_key_pair.deployer.key_name
-  security_groups        = [aws_security_group.strapi_sg.name]
+  ami           = data.aws_ami.amazon_linux.id
+  instance_type = "t2.micro"
+  # 🔥 No key_name (SSH disabled)
+  security_groups = [aws_security_group.strapi_sg.name]
 
   user_data = <<-EOF
               #!/bin/bash
@@ -70,7 +58,6 @@ resource "aws_instance" "strapi" {
               systemctl start docker
               systemctl enable docker
               usermod -a -G docker ec2-user
-
               docker pull ${var.docker_image}
               docker rm -f strapi-app || true
               docker run -d -p 1337:1337 --name strapi-app ${var.docker_image}
@@ -81,8 +68,8 @@ resource "aws_instance" "strapi" {
   }
 }
 
-# ✅ Output public IP
+# ✅ Public IP Output
 output "ec2_public_ip" {
-  description = "Public IP of the EC2 instance"
+  description = "Public IP of the Strapi EC2 instance"
   value       = aws_instance.strapi.public_ip
 }
