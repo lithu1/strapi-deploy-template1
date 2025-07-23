@@ -4,8 +4,24 @@ provider "aws" {
   secret_key = var.aws_secret_key
 }
 
+# ✅ Fetch the latest Ubuntu 22.04 LTS AMI dynamically
+data "aws_ami" "ubuntu" {
+  most_recent = true
+  owners      = ["099720109477"] # Canonical
+
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+}
+
 resource "aws_instance" "strapi" {
-  ami                    = "ami-0cf10cdf9fcd62d37"  # ✅ Valid Ubuntu 22.04 LTS AMI for us-east-2
+  ami                    = data.aws_ami.ubuntu.id  # ✅ Use dynamic AMI
   instance_type          = "t2.micro"
   key_name               = "strapi-deploy-key"
 
