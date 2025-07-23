@@ -8,9 +8,14 @@ data "aws_vpc" "default" {
   default = true
 }
 
+resource "random_id" "key_suffix" {
+  byte_length = 4
+}
+
 resource "aws_key_pair" "strapi_key" {
-  key_name   = "strapi-deploy-key"
-  public_key = file("~/.ssh/id_rsa.pub") # Make sure this path exists on your local machine
+  key_name   = "strapi-deploy-key-${random_id.key_suffix.hex}"
+  public_key = file("${path.module}/id_rsa.pub") # Updated path for GitHub Actions
+  region     = "us-east-2"
 }
 
 resource "aws_security_group" "strapi_sg" {
@@ -48,6 +53,7 @@ resource "aws_instance" "strapi" {
   key_name                    = aws_key_pair.strapi_key.key_name
   vpc_security_group_ids      = [aws_security_group.strapi_sg.id]
   associate_public_ip_address = true
+  region                      = "us-east-2"
 
   tags = {
     Name = "strapi-server"
