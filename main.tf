@@ -5,7 +5,7 @@ provider "aws" {
 }
 
 resource "aws_instance" "strapi" {
-  ami                    = "ami-053b0d53c279acc90"  # Ubuntu 22.04 LTS
+  ami                    = "ami-0cf10cdf9fcd62d37"  # ✅ Valid Ubuntu 22.04 LTS AMI for us-east-2
   instance_type          = "t2.micro"
   key_name               = "strapi-deploy-key"
 
