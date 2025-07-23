@@ -11,6 +11,6 @@ variable "aws_secret_key" {
 }
 
 variable "docker_image" {
-  description = "e.g. lithu213/strapi-app:latest"
+  description = "lithu213/strapi-app:latest" 
   type        = string
 }
