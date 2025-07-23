@@ -1,15 +1,17 @@
 variable "aws_access_key" {
-  type        = string
   description = "AWS access key"
+  type        = string
+  sensitive   = true
 }
 
 variable "aws_secret_key" {
-  type        = string
   description = "AWS secret key"
+  type        = string
+  sensitive   = true
 }
 
-variable "image_tag" {
+variable "region" {
+  description = "AWS region to deploy into"
   type        = string
-  default     = "latest"
-  description = "Tag for Docker image"
+  default     = "us-east-2"
 }
