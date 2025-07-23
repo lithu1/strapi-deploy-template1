@@ -7,15 +7,15 @@ resource "tls_private_key" "strapi_key" {
   rsa_bits  = 4096
 }
 
+resource "random_pet" "name" {}
+
 resource "aws_key_pair" "strapi_key" {
   key_name   = "strapi-deploy-key-${random_pet.name.id}"
   public_key = tls_private_key.strapi_key.public_key_openssh
 }
 
-resource "random_pet" "name" {}
-
 resource "aws_security_group" "strapi_sg" {
-  name        = "strapi-sg"
+  name        = "strapi-sg-${random_pet.name.id}" # ✅ Ensure unique name
   description = "Allow HTTP, HTTPS, and SSH"
 
   ingress {
@@ -41,7 +41,7 @@ resource "aws_security_group" "strapi_sg" {
 }
 
 resource "aws_instance" "strapi" {
-  ami                         = "ami-0e001c9271cf7f3b9" # ✅ Ubuntu 22.04 LTS (EC2 Connect supported)
+  ami                         = "ami-0e001c9271cf7f3b9" # Ubuntu 22.04 LTS (us-east-2)
   instance_type               = "t2.micro"
   key_name                    = aws_key_pair.strapi_key.key_name
   vpc_security_group_ids      = [aws_security_group.strapi_sg.id]
