@@ -41,8 +41,8 @@ resource "aws_key_pair" "strapi_key" {
 }
 
 resource "aws_security_group" "strapi_sg" {
-  name        = "strapi-sg"
-  description = "Allow HTTP, HTTPS, and SSH"
+  name        = "strapi-sg-${random_pet.name.id}" # ✅ unique SG name
+  description = "Allow Strapi and SSH access"
   vpc_id      = data.aws_vpc.default.id
 
   ingress = [
@@ -58,7 +58,7 @@ resource "aws_security_group" "strapi_sg" {
       self             = false
     },
     {
-      description      = "Allow Strapi port"
+      description      = "Allow Strapi (1337)"
       from_port        = 1337
       to_port          = 1337
       protocol         = "tcp"
@@ -86,10 +86,10 @@ resource "aws_security_group" "strapi_sg" {
 }
 
 resource "aws_instance" "strapi" {
-  ami                    = "ami-024e6efaf93d85776" # ✅ Ubuntu 22.04 (EC2 Connect OK in us-east-2)
-  instance_type          = "t2.micro"
-  key_name               = aws_key_pair.strapi_key.key_name
-  vpc_security_group_ids = [aws_security_group.strapi_sg.id]
+  ami                         = "ami-024e6efaf93d85776" # ✅ Ubuntu 22.04 for EC2 Connect in us-east-2
+  instance_type               = "t2.micro"
+  key_name                    = aws_key_pair.strapi_key.key_name
+  vpc_security_group_ids      = [aws_security_group.strapi_sg.id]
   associate_public_ip_address = true
 
   user_data = <<-EOT
