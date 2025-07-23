@@ -1,7 +1,28 @@
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+    tls = {
+      source  = "hashicorp/tls"
+      version = "~> 4.0"
+    }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.0"
+    }
+  }
+}
+
 provider "aws" {
   region     = "us-east-2"
   access_key = var.aws_access_key
   secret_key = var.aws_secret_key
+}
+
+data "aws_vpc" "default" {
+  default = true
 }
 
 resource "random_pet" "name" {
@@ -22,40 +43,54 @@ resource "aws_key_pair" "strapi_key" {
 resource "aws_security_group" "strapi_sg" {
   name        = "strapi-sg"
   description = "Allow HTTP, HTTPS, and SSH"
+  vpc_id      = data.aws_vpc.default.id
+
   ingress = [
     {
-      from_port   = 22
-      to_port     = 22
-      protocol    = "tcp"
-      cidr_blocks = ["0.0.0.0/0"]
+      description      = "Allow SSH"
+      from_port        = 22
+      to_port          = 22
+      protocol         = "tcp"
+      cidr_blocks      = ["0.0.0.0/0"]
+      ipv6_cidr_blocks = []
+      prefix_list_ids  = []
+      security_groups  = []
+      self             = false
     },
     {
-      from_port   = 1337
-      to_port     = 1337
-      protocol    = "tcp"
-      cidr_blocks = ["0.0.0.0/0"]
+      description      = "Allow Strapi port"
+      from_port        = 1337
+      to_port          = 1337
+      protocol         = "tcp"
+      cidr_blocks      = ["0.0.0.0/0"]
+      ipv6_cidr_blocks = []
+      prefix_list_ids  = []
+      security_groups  = []
+      self             = false
     }
   ]
+
   egress = [
     {
-      from_port   = 0
-      to_port     = 0
-      protocol    = "-1"
-      cidr_blocks = ["0.0.0.0/0"]
+      description      = "Allow all outbound"
+      from_port        = 0
+      to_port          = 0
+      protocol         = "-1"
+      cidr_blocks      = ["0.0.0.0/0"]
+      ipv6_cidr_blocks = []
+      prefix_list_ids  = []
+      security_groups  = []
+      self             = false
     }
   ]
 }
 
 resource "aws_instance" "strapi" {
-  ami                    = "ami-053b0d53c279acc90" # ✅ Ubuntu 22.04 LTS for us-east-2
+  ami                    = "ami-024e6efaf93d85776" # ✅ Ubuntu 22.04 (EC2 Connect OK in us-east-2)
   instance_type          = "t2.micro"
   key_name               = aws_key_pair.strapi_key.key_name
   vpc_security_group_ids = [aws_security_group.strapi_sg.id]
   associate_public_ip_address = true
-
-  tags = {
-    Name = "strapi-instance"
-  }
 
   user_data = <<-EOT
               #!/bin/bash
@@ -64,6 +99,10 @@ resource "aws_instance" "strapi" {
               systemctl start docker
               systemctl enable docker
             EOT
+
+  tags = {
+    Name = "strapi-instance"
+  }
 }
 
 output "ec2_public_ip" {
