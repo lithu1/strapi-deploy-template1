@@ -69,7 +69,7 @@ resource "aws_security_group" "strapi_sg" {
 }
 
 resource "aws_instance" "strapi" {
-  ami                         = "ami-051f8a213df8bc089" # ✅ Amazon Linux 2 (EC2 Connect supported)
+  ami                         = "ami-00f9f8703f9f10b8e" # ✅ Valid Amazon Linux 2 AMI for us-east-2
   instance_type               = "t2.micro"
   vpc_security_group_ids      = [aws_security_group.strapi_sg.id]
   associate_public_ip_address = true
