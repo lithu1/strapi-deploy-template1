@@ -9,13 +9,7 @@ variable "aws_secret_key" {
 }
 
 variable "image_tag" {
-  description = "Tag of the Docker image to deploy"
+  description = "Tag for the Docker image"
   type        = string
   default     = "latest"
-}
-
-variable "public_key_path" {
-  description = "Path to the SSH public key file"
-  type        = string
-  default     = "~/.ssh/id_rsa.pub"
 }
