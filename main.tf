@@ -4,32 +4,43 @@ provider "aws" {
   secret_key = var.aws_secret_key
 }
 
-# ✅ Fetch the latest Ubuntu 22.04 LTS AMI dynamically
-data "aws_ami" "ubuntu" {
+# ✅ Fetch latest Amazon Linux 2023 AMI
+data "aws_ami" "amazon_linux" {
   most_recent = true
-  owners      = ["099720109477"] # Canonical
+  owners      = ["137112412989"]  # Amazon
 
   filter {
     name   = "name"
-    values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
+    values = ["al2023-ami-*-x86_64"]
+  }
+
+  filter {
+    name   = "architecture"
+    values = ["x86_64"]
   }
 
   filter {
     name   = "virtualization-type"
     values = ["hvm"]
   }
+
+  filter {
+    name   = "root-device-type"
+    values = ["ebs"]
+  }
 }
 
 resource "aws_instance" "strapi" {
-  ami                    = data.aws_ami.ubuntu.id  # ✅ Use dynamic AMI
+  ami                    = data.aws_ami.amazon_linux.id
   instance_type          = "t2.micro"
   key_name               = "strapi-deploy-key"
 
   user_data = <<-EOF
               #!/bin/bash
-              apt update -y
-              apt install docker.io -y
+              yum update -y
+              yum install docker -y
               systemctl start docker
+              systemctl enable docker
               docker pull lithu213/strapi-app:${var.image_tag}
               docker run -d -p 80:1337 lithu213/strapi-app:${var.image_tag}
               EOF
