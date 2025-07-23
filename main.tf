@@ -5,7 +5,7 @@ provider "aws" {
 }
 
 resource "aws_instance" "strapi" {
-  ami                    = "ami-0453898e98046c639" # Amazon Linux 2023 AMI
+  ami                    = "ami-0453898e98046c639" # Amazon Linux 2023
   instance_type          = "t2.micro"
   key_name               = "strapi-deploy-key"
 
