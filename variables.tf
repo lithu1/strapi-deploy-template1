@@ -9,3 +9,9 @@ variable "aws_secret_key" {
   type        = string
   sensitive   = true
 }
+
+variable "image_tag" {
+  description = "Docker image tag (unused but passed via CLI)"
+  type        = string
+  default     = "latest"
+}
