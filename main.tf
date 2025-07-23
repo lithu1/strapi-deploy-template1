@@ -4,6 +4,10 @@ provider "aws" {
   secret_key = var.aws_secret_key
 }
 
+data "aws_vpc" "default" {
+  default = true
+}
+
 resource "aws_security_group" "strapi_sg" {
   name_prefix = "strapi-sg-"
   description = "Allow inbound traffic for Strapi"
@@ -31,15 +35,16 @@ resource "aws_security_group" "strapi_sg" {
   }
 }
 
-data "aws_vpc" "default" {
-  default = true
+resource "aws_key_pair" "strapi_key" {
+  key_name   = "strapi-new-key"
+  public_key = file(var.public_key_path)
 }
 
 resource "aws_instance" "strapi" {
-  ami                    = "ami-0c55b159cbfafe1f0" # Amazon Linux 2 AMI
-  instance_type          = "t2.micro"
-  key_name               = "strapi-deploy-key"
-  security_groups        = [aws_security_group.strapi_sg.name]
+  ami           = "ami-0c55b159cbfafe1f0" # Amazon Linux 2 AMI in us-east-2
+  instance_type = "t2.micro"
+  key_name      = aws_key_pair.strapi_key.key_name
+  security_groups = [aws_security_group.strapi_sg.name]
   associate_public_ip_address = true
   tags = {
     Name = "strapi-server"
@@ -53,11 +58,11 @@ resource "aws_instance" "strapi" {
               systemctl start docker
               systemctl enable docker
               usermod -a -G docker ec2-user
-              
+
               docker pull lithu213/strapi-app:latest
               docker rm -f strapi-app || true
               docker run -d -p 1337:1337 --name strapi-app lithu213/strapi-app:latest
-            EOT
+              EOT
 }
 
 output "ec2_public_ip" {
