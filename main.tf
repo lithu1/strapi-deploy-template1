@@ -4,7 +4,7 @@ provider "aws" {
   secret_key = var.aws_secret_key
 }
 
-# Lookup latest Amazon Linux 2 AMI
+# ✅ Dynamically get the latest Amazon Linux 2 AMI
 data "aws_ami" "amazon_linux" {
   most_recent = true
   owners      = ["amazon"]
@@ -13,16 +13,23 @@ data "aws_ami" "amazon_linux" {
     name   = "name"
     values = ["amzn2-ami-hvm-*-x86_64-gp2"]
   }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
 }
 
+# ✅ EC2 Key Pair
 resource "aws_key_pair" "deployer" {
   key_name   = "strapi-key"
   public_key = file(var.public_key_path)
 }
 
+# ✅ Security Group (SSH + HTTP for Strapi)
 resource "aws_security_group" "strapi_sg" {
   name        = "strapi-sg"
-  description = "Allow SSH and HTTP for Strapi"
+  description = "Allow SSH and Strapi port"
 
   ingress {
     description = "SSH"
@@ -33,7 +40,7 @@ resource "aws_security_group" "strapi_sg" {
   }
 
   ingress {
-    description = "Strapi"
+    description = "Strapi port"
     from_port   = 1337
     to_port     = 1337
     protocol    = "tcp"
@@ -48,23 +55,25 @@ resource "aws_security_group" "strapi_sg" {
   }
 }
 
+# ✅ EC2 Instance with Docker + Strapi container
 resource "aws_instance" "strapi" {
-  ami           = data.aws_ami.amazon_linux.id
-  instance_type = "t2.micro"
-  key_name      = aws_key_pair.deployer.key_name
-  security_groups = [aws_security_group.strapi_sg.name]
+  ami                    = data.aws_ami.amazon_linux.id
+  instance_type          = "t2.micro"
+  key_name               = aws_key_pair.deployer.key_name
+  security_groups        = [aws_security_group.strapi_sg.name]
 
   user_data = <<-EOF
               #!/bin/bash
               yum update -y
               amazon-linux-extras enable docker
-              yum install docker -y
+              yum install -y docker
               systemctl start docker
               systemctl enable docker
               usermod -a -G docker ec2-user
+
               docker pull ${var.docker_image}
               docker rm -f strapi-app || true
-              docker run -d -p 80:1337 --name strapi-app ${var.docker_image}
+              docker run -d -p 1337:1337 --name strapi-app ${var.docker_image}
               EOF
 
   tags = {
@@ -72,6 +81,7 @@ resource "aws_instance" "strapi" {
   }
 }
 
+# ✅ Output public IP
 output "ec2_public_ip" {
   description = "Public IP of the EC2 instance"
   value       = aws_instance.strapi.public_ip
