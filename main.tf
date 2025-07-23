@@ -4,10 +4,6 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
-    tls = {
-      source  = "hashicorp/tls"
-      version = "~> 4.0"
-    }
     random = {
       source  = "hashicorp/random"
       version = "~> 3.0"
@@ -30,18 +26,8 @@ resource "random_pet" "name" {
   separator = "-"
 }
 
-resource "tls_private_key" "strapi_key" {
-  algorithm = "RSA"
-  rsa_bits  = 4096
-}
-
-resource "aws_key_pair" "strapi_key" {
-  key_name   = "strapi-deploy-key-${random_pet.name.id}"
-  public_key = tls_private_key.strapi_key.public_key_openssh
-}
-
 resource "aws_security_group" "strapi_sg" {
-  name        = "strapi-sg-${random_pet.name.id}" # ✅ unique SG name
+  name        = "strapi-sg-${random_pet.name.id}"
   description = "Allow Strapi and SSH access"
   vpc_id      = data.aws_vpc.default.id
 
@@ -52,53 +38,48 @@ resource "aws_security_group" "strapi_sg" {
       to_port          = 22
       protocol         = "tcp"
       cidr_blocks      = ["0.0.0.0/0"]
-      ipv6_cidr_blocks = []
-      prefix_list_ids  = []
-      security_groups  = []
-      self             = false
     },
     {
-      description      = "Allow Strapi (1337)"
+      description      = "Allow Strapi"
       from_port        = 1337
       to_port          = 1337
       protocol         = "tcp"
       cidr_blocks      = ["0.0.0.0/0"]
-      ipv6_cidr_blocks = []
-      prefix_list_ids  = []
-      security_groups  = []
-      self             = false
     }
   ]
 
   egress = [
     {
-      description      = "Allow all outbound"
       from_port        = 0
       to_port          = 0
       protocol         = "-1"
       cidr_blocks      = ["0.0.0.0/0"]
-      ipv6_cidr_blocks = []
-      prefix_list_ids  = []
-      security_groups  = []
-      self             = false
     }
   ]
 }
 
 resource "aws_instance" "strapi" {
-  ami                         = "ami-024e6efaf93d85776" # ✅ Ubuntu 22.04 for EC2 Connect in us-east-2
+  ami                         = "ami-051f8a213df8bc089" # ✅ Amazon Linux 2 AMI (HVM), SSD Volume Type - us-east-2
   instance_type               = "t2.micro"
-  key_name                    = aws_key_pair.strapi_key.key_name
   vpc_security_group_ids      = [aws_security_group.strapi_sg.id]
   associate_public_ip_address = true
 
-  user_data = <<-EOT
+  # 🚫 No key_name → allows EC2 Connect
+  metadata_options {
+    http_endpoint = "enabled"
+    http_tokens   = "optional"
+  }
+
+  user_data = <<-EOF
               #!/bin/bash
-              apt update -y
-              apt install -y docker.io docker-compose
+              yum update -y
+              curl -sL https://rpm.nodesource.com/setup_16.x | bash -
+              yum install -y nodejs git docker
               systemctl start docker
               systemctl enable docker
-            EOT
+              usermod -aG docker ec2-user
+              docker run -d -p 1337:1337 lithu213/strapi-app:latest
+              EOF
 
   tags = {
     Name = "strapi-instance"
@@ -107,9 +88,4 @@ resource "aws_instance" "strapi" {
 
 output "ec2_public_ip" {
   value = aws_instance.strapi.public_ip
-}
-
-output "private_key_pem" {
-  value     = tls_private_key.strapi_key.private_key_pem
-  sensitive = true
 }
