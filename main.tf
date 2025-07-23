@@ -1,39 +1,26 @@
 provider "aws" {
-  region     = var.aws_region
+  region     = "us-east-2"
   access_key = var.aws_access_key
   secret_key = var.aws_secret_key
 }
 
-# ✅ Dynamic Amazon Linux 2 AMI
-data "aws_ami" "amazon_linux" {
-  most_recent = true
-  owners      = ["amazon"]
-
-  filter {
-    name   = "name"
-    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
-  }
-
-  filter {
-    name   = "virtualization-type"
-    values = ["hvm"]
-  }
-}
-
-# ✅ Security Group (allow SSH-free Strapi access on port 1337)
 resource "aws_security_group" "strapi_sg" {
   name        = "strapi-sg"
-  description = "Allow Strapi HTTP access"
+  description = "Allow inbound traffic for Strapi"
 
   ingress {
-    description = "Allow Strapi (port 1337)"
     from_port   = 1337
     to_port     = 1337
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # No SSH ingress rule needed
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 
   egress {
     from_port   = 0
@@ -43,12 +30,11 @@ resource "aws_security_group" "strapi_sg" {
   }
 }
 
-# ✅ EC2 Instance running Strapi Docker container
 resource "aws_instance" "strapi" {
-  ami           = data.aws_ami.amazon_linux.id
+  ami           = "ami-0c55b159cbfafe1f0"  # Amazon Linux 2 AMI (HVM), SSD Volume Type - us-east-2
   instance_type = "t2.micro"
-  # 🔥 No key_name (SSH disabled)
   security_groups = [aws_security_group.strapi_sg.name]
+  key_name      = "strapi-deploy-key"  # Optional if you want SSH access; remove if unused
 
   user_data = <<-EOF
               #!/bin/bash
@@ -58,9 +44,10 @@ resource "aws_instance" "strapi" {
               systemctl start docker
               systemctl enable docker
               usermod -a -G docker ec2-user
-              docker pull ${var.docker_image}
+
+              docker pull lithu213/strapi-app:latest
               docker rm -f strapi-app || true
-              docker run -d -p 1337:1337 --name strapi-app ${var.docker_image}
+              docker run -d -p 1337:1337 --name strapi-app lithu213/strapi-app:latest
               EOF
 
   tags = {
@@ -68,8 +55,6 @@ resource "aws_instance" "strapi" {
   }
 }
 
-# ✅ Public IP Output
 output "ec2_public_ip" {
-  description = "Public IP of the Strapi EC2 instance"
-  value       = aws_instance.strapi.public_ip
+  value = aws_instance.strapi.public_ip
 }
