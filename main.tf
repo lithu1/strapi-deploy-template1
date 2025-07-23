@@ -4,6 +4,17 @@ provider "aws" {
   secret_key = var.aws_secret_key
 }
 
+# Lookup latest Amazon Linux 2 AMI
+data "aws_ami" "amazon_linux" {
+  most_recent = true
+  owners      = ["amazon"]
+
+  filter {
+    name   = "name"
+    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
+  }
+}
+
 resource "aws_key_pair" "deployer" {
   key_name   = "strapi-key"
   public_key = file(var.public_key_path)
@@ -37,8 +48,8 @@ resource "aws_security_group" "strapi_sg" {
   }
 }
 
-resource "aws_instance" "strapi_ec2" {
-  ami           = var.ami_id
+resource "aws_instance" "strapi" {
+  ami           = data.aws_ami.amazon_linux.id
   instance_type = "t2.micro"
   key_name      = aws_key_pair.deployer.key_name
   security_groups = [aws_security_group.strapi_sg.name]
@@ -46,21 +57,22 @@ resource "aws_instance" "strapi_ec2" {
   user_data = <<-EOF
               #!/bin/bash
               yum update -y
-              yum install -y docker
+              amazon-linux-extras enable docker
+              yum install docker -y
               systemctl start docker
               systemctl enable docker
-
+              usermod -a -G docker ec2-user
               docker pull ${var.docker_image}
               docker rm -f strapi-app || true
-              docker run -d -p 1337:1337 --name strapi-app ${var.docker_image}
+              docker run -d -p 80:1337 --name strapi-app ${var.docker_image}
               EOF
 
   tags = {
-    Name = "Strapi-Server"
+    Name = "strapi-server"
   }
 }
 
-output "strapi_public_ip" {
+output "ec2_public_ip" {
   description = "Public IP of the EC2 instance"
-  value       = aws_instance.strapi_ec2.public_ip
+  value       = aws_instance.strapi.public_ip
 }
