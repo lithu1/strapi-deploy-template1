@@ -5,8 +5,9 @@ provider "aws" {
 }
 
 resource "aws_security_group" "strapi_sg" {
-  name        = "strapi-sg"
+  name_prefix = "strapi-sg-"
   description = "Allow inbound traffic for Strapi"
+  vpc_id      = data.aws_vpc.default.id
 
   ingress {
     from_port   = 1337
@@ -30,13 +31,21 @@ resource "aws_security_group" "strapi_sg" {
   }
 }
 
-resource "aws_instance" "strapi" {
-  ami           = "ami-0c55b159cbfafe1f0"  # Amazon Linux 2 AMI (HVM), SSD Volume Type - us-east-2
-  instance_type = "t2.micro"
-  security_groups = [aws_security_group.strapi_sg.name]
-  key_name      = "strapi-deploy-key"  # Optional if you want SSH access; remove if unused
+data "aws_vpc" "default" {
+  default = true
+}
 
-  user_data = <<-EOF
+resource "aws_instance" "strapi" {
+  ami                    = "ami-0c55b159cbfafe1f0" # Amazon Linux 2 AMI
+  instance_type          = "t2.micro"
+  key_name               = "strapi-deploy-key"
+  security_groups        = [aws_security_group.strapi_sg.name]
+  associate_public_ip_address = true
+  tags = {
+    Name = "strapi-server"
+  }
+
+  user_data = <<-EOT
               #!/bin/bash
               yum update -y
               amazon-linux-extras enable docker
@@ -44,15 +53,11 @@ resource "aws_instance" "strapi" {
               systemctl start docker
               systemctl enable docker
               usermod -a -G docker ec2-user
-
+              
               docker pull lithu213/strapi-app:latest
               docker rm -f strapi-app || true
               docker run -d -p 1337:1337 --name strapi-app lithu213/strapi-app:latest
-              EOF
-
-  tags = {
-    Name = "strapi-server"
-  }
+            EOT
 }
 
 output "ec2_public_ip" {
