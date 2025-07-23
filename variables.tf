@@ -1,20 +1,20 @@
 variable "aws_access_key" {
-  type        = string
   description = "AWS access key"
+  type        = string
 }
 
 variable "aws_secret_key" {
-  type        = string
   description = "AWS secret key"
-}
-
-variable "image_tag" {
   type        = string
-  default     = "latest"
-  description = "Docker image tag to use"
 }
 
 variable "key_name" {
+  description = "Name of existing AWS key pair for SSH/EC2 Connect"
   type        = string
-  description = "Existing EC2 key pair name to allow SSH access (optional if using EC2 Connect)"
+}
+
+variable "image_tag" {
+  description = "Docker image tag"
+  type        = string
+  default     = "latest"
 }
