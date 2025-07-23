@@ -31,40 +31,49 @@ resource "aws_security_group" "strapi_sg" {
   description = "Allow Strapi and SSH access"
   vpc_id      = data.aws_vpc.default.id
 
-  ingress = [
-    {
-      description      = "Allow SSH"
-      from_port        = 22
-      to_port          = 22
-      protocol         = "tcp"
-      cidr_blocks      = ["0.0.0.0/0"]
-    },
-    {
-      description      = "Allow Strapi"
-      from_port        = 1337
-      to_port          = 1337
-      protocol         = "tcp"
-      cidr_blocks      = ["0.0.0.0/0"]
-    }
-  ]
+  ingress {
+    description      = "Allow SSH"
+    from_port        = 22
+    to_port          = 22
+    protocol         = "tcp"
+    cidr_blocks      = ["0.0.0.0/0"]
+    ipv6_cidr_blocks = []
+    prefix_list_ids  = []
+    security_groups  = []
+    self             = false
+  }
 
-  egress = [
-    {
-      from_port        = 0
-      to_port          = 0
-      protocol         = "-1"
-      cidr_blocks      = ["0.0.0.0/0"]
-    }
-  ]
+  ingress {
+    description      = "Allow Strapi"
+    from_port        = 1337
+    to_port          = 1337
+    protocol         = "tcp"
+    cidr_blocks      = ["0.0.0.0/0"]
+    ipv6_cidr_blocks = []
+    prefix_list_ids  = []
+    security_groups  = []
+    self             = false
+  }
+
+  egress {
+    description      = "Allow all outbound"
+    from_port        = 0
+    to_port          = 0
+    protocol         = "-1"
+    cidr_blocks      = ["0.0.0.0/0"]
+    ipv6_cidr_blocks = []
+    prefix_list_ids  = []
+    security_groups  = []
+    self             = false
+  }
 }
 
 resource "aws_instance" "strapi" {
-  ami                         = "ami-051f8a213df8bc089" # ✅ Amazon Linux 2 AMI (HVM), SSD Volume Type - us-east-2
+  ami                         = "ami-051f8a213df8bc089" # ✅ Amazon Linux 2 (EC2 Connect supported)
   instance_type               = "t2.micro"
   vpc_security_group_ids      = [aws_security_group.strapi_sg.id]
   associate_public_ip_address = true
 
-  # 🚫 No key_name → allows EC2 Connect
   metadata_options {
     http_endpoint = "enabled"
     http_tokens   = "optional"
@@ -82,7 +91,7 @@ resource "aws_instance" "strapi" {
               EOF
 
   tags = {
-    Name = "strapi-instance"
+    Name = "strapi-instance-${random_pet.name.id}"
   }
 }
 
