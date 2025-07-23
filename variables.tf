@@ -15,3 +15,9 @@ variable "region" {
   type        = string
   default     = "us-east-2"
 }
+
+variable "image_tag" {
+  description = "Tag for the Docker image (e.g. 'latest')"
+  type        = string
+  default     = "latest"
+}
