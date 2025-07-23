@@ -1,22 +1,18 @@
+# Step 1: Build the app
+FROM node:18-alpine as build
+
+WORKDIR /app
+COPY . .
+RUN npm install
+RUN npm run build
+
+# Step 2: Run the app
 FROM node:18-alpine
 
-# Set working directory
 WORKDIR /app
+COPY --from=build /app ./
 
-# Copy package files
-COPY package*.json ./
+RUN npm install --production
 
-# Install dependencies
-RUN npm install
-
-# Copy the rest of the app
-COPY . .
-
-# Build Strapi (optional if you use build step)
-# RUN npm run build
-
-# Expose port
 EXPOSE 1337
-
-# Start the app
 CMD ["npm", "start"]
